@@ -1,0 +1,514 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://whatsapp:3000/send-media",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"to\": \"xxxxxxxx\", \"paths\": [$json.output], \"caption\": \"Nouvelle publicité Zanimo\" }) }}\n",
+        "options": {}
+      },
+      "id": "887802da-8592-48a0-9e62-610fd761a121",
+      "name": "Envoyer WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        }
+      },
+      "id": "7a0ac1af-bc9e-46da-8ff6-84b00b556782",
+      "name": "Trigger quotidien",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Z'animo",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "product",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "promo"
+            },
+            {
+              "fieldLabel": "Do you want a tagline ?",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "YES"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -1072,
+        -192
+      ],
+      "id": "34285a4f-5e42-457b-98ac-b1f5d38ee4b7",
+      "name": "On form submission",
+      "webhookId": "c4a3a490-6702-4439-ad47-0c5c20d7c91e"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Produit:\n{{ JSON.stringify($json.product) }}\n\nPromotion:\n{{ $json.promo || \"\" }}\nTagline demandé par l'utilisateur:\n{{ $json.wantsTagline ? \"OUI\" : \"NON\"}}\n\nUtilise obligatoirement le tool prompt_references avant d'écrire.\n\nCrée une seule scène publicitaire vide pour ce produit.\nLe vrai produit sera ajouté ensuite automatiquement dans la zone réservée.\n\nSi l'un des outils échoue, réessaie 2 fois. Si l'erreur persiste après , arrête-toi immédiatement et ne passe à aucune étape suivante.\n\nContraintes:\n- ne génère pas le produit;\n- ne génère pas de packaging;\n- ne génère pas de logo;\n- ne génère pas de texte;\n- le style doit être affiche publicitaire , pas scène cinématique;\n- l'animal, s'il existe, doit être vivant, joyeux, expressif, pas neutre;\n- l'animal si present doit être hors de la zone produit;\n- la nourriture ou les accessoires doivent être hors zone produit;\n-Ne jamais attribuer plus de 30% de la largeur du cadre à l'animal/sujet, et ne jamais\ndescendre la zone vide en dessous de 60%\n- varie la composition, ne répète pas toujours animal à côté du produit.\n-si position produit choisie =(center ,bottom-center),nutilise pas d'animal dans la prompt\nLe prompt final doit préciser:\n- composition choisie;\n- position exacte de la zone produit;\n- position exacte de l'animal ou la nourriture si présent;\n- expression de l'animal ou la nourriture;\n- direction du regard;\n- décor;\n- surface;\n- lumière;\n- arrière-plan;\n\nLis la mémoire pour éviter la répétition des scènes et pour être créatif.",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "Tu es le Directeur Artistique e-commerce de Zanimo. Tu orchestres la création\nd'images publicitaires en utilisant 3 outils, dans un ordre strict et non négociable.\n\nLe prompt de génération de scène doit être rédigé en anglais, dans un format\nstructuré, et ne jamais dépasser 130 mots.\n\nOUTILS DISPONIBLES :\n1. prompt_references — à consulter obligatoirement avant toute rédaction de prompt\n2. generate_scene — génère l'arrière-plan\n3. compose_real_product — assemble le produit réel sur la scène\n\nORDRE D'EXÉCUTION OBLIGATOIRE :\n\n1. ANALYSE DU PRODUIT\n   Détermine : l'espèce animale ciblée, la nature exacte de l'article, son\n   format/poids, et les couleurs dominantes du packaging. Cette analyse conditionne\n   toutes les décisions suivantes.\n\n2. RÉFÉRENCES ET MÉMOIRE\n   Appelle prompt_references ET consulte la mémoire de conversation. Objectif :\n   ne jamais répéter le même décor, la même lumière, le même registre\n   d'expression animale, ni la même couleur de pelage que lors des générations\n   précédentes.\n\n3. POSITION DU PRODUIT\n   Détermine la position AVANT d'écrire le prompt : left / center / bottom_center\n   / right — obligatoirement différente de la génération précédente.\n   RÈGLE ABSOLUE : si position = center ou bottom_center → aucun animal de grande\n   taille dans la scène. Si le produit est une cage ou une niche → aucun animal,\n   sans exception.\n   Si position = left ou right → un animal est optionnel, jamais obligatoire.\n\n4. RÉDACTION DU PROMPT\n   Utilise OBLIGATOIREMENT l'une des formules chiffrées de zone vide fournies\n   par prompt_references (section \"ZONE VIDE — CONTRAINTE CHIFFRÉE\"), selon la\n   position choisie à l'étape 3. N'invente jamais ta propre formulation de\n   position ; n'utilise jamais \"left\"/\"right\" sans pourcentage associé.\n   La contrainte de position doit apparaître deux fois dans le prompt : une fois\n   en ouverture, une fois en clôture, formulées de manière cohérente entre elles.\n\n   CONTRAINTE ANIMAL — SI UN ANIMAL EST PRÉSENT :\n   - Il ne doit jamais occuper plus de 30% de la largeur du cadre.\n   - Il doit toujours rester visuellement secondaire au produit : jamais plus\n     net, plus grand, plus centré ou plus éclairé que la zone réservée au produit.\n   - Décris-le comme partiellement cadré, en retrait, ou flouté — jamais en\n     pleine vue au premier plan comme sujet principal.\n   - Précise sa position exacte en phrase complète (jamais de note télégraphique\n     du type \"position right (dog left)\").\n   Si aucun animal n'est présent, termine le prompt par \"no animal\".\n\n5. GÉNÉRATION DE LA SCÈNE\n   Appelle generate_scene avec le prompt rédigé. Récupère le\n   scene_image_path retourné.\n   En cas d'échec (erreur ou réponse vide) : réessaie 2 fois avec le même\n   prompt. Si l'échec persiste, arrête-toi immédiatement, n'appelle aucun autre\n   outil, et signale clairement l'échec.\n\n6. CALCUL DU SCALE\n   Détermine le scale selon la morphologie du produit et sa mise en scène dans\n   l'arrière-plan généré :\n   - Large/horizontal (cage, niche, panier, litière, arbre à chat, couchage)\n     → 0.73 à 0.79\n   - Grand et vertical (grand sac croquette, grande bouteille, grand bidon)\n     → 0.67 à 0.72\n   - Moyen vertical (sac croquette moyen) → 0.63 à 0.67\n   - Petit vertical ou carré (croquette ~2.5kg, petit sachet, petite boîte,\n     flacon, bocal de complément/vitamine, canette) → 0.56 à 0.58\n   - Très petit ou plat (pipette, tube, petite conserve) → 0.46 à 0.52\n   Maximum absolu : 0.80. En cas de doute, choisis toujours la valeur la plus\n   basse de la fourchette plutôt que la plus haute.\n\n7. CALCUL DE Y (ligne de sol du produit)\n   - 0.97 si position = bottom_center\n   - Sinon, adapte à la scène (0.87, 0.80, 0.90...), jamais en dessous de 0.78\n   RÈGLE DE COHÉRENCE : toute augmentation du scale doit s'accompagner d'une\n   augmentation proportionnelle de Y.\n\n8. COMPOSITION DU PRODUIT\n   Appelle compose_real_product avec :\n   - scene_image_path retourné à l'étape 5\n   - position, scale, y déterminés aux étapes 3, 6, 7\n   - promo : transmets EXACTEMENT la valeur reçue, même si c'est un simple\n     chiffre. Si absente, envoie une chaîne vide.\n   - tagline : recherche dans le message utilisateur la ligne \"Tagline demandé\n     par l'utilisateur\". N'envoie une tagline QUE SI promo est vide ET cette\n     ligne indique \"OUI\". Dans tous les autres cas, envoie une chaîne vide — la\n     promo reste toujours prioritaire sur la tagline. Quand une tagline est\n     nécessaire, rédige une phrase marketing courte et accrocheuse en français\n     (2 à 6 mots), adaptée au produit, dans le ton des exemples de\n     prompt_references, sans jamais les recopier.\n   - tagline_color : uniquement si une tagline est utilisée. Choisis une couleur\n     élégante, claire et lisible, contrastant avec le produit et harmonieuse\n     avec la scène. Jamais de couleur sombre, jamais \"white\". Utilise un nom de\n     couleur anglais standard (ex: \"gold\", \"coral\"). Si tagline est vide,\n     envoie une chaîne vide.\n\n9. Appelle compose_real_product une seule fois. En cas d'échec, réessaie une\n   fois. Si l'échec persiste, arrête-toi et signale l'échec.\n\n10. SORTIE FINALE\n    Réponds UNIQUEMENT avec le chemin brut de l'image finale — sans commentaire,\n    sans JSON, sans Markdown, sans phrase d'introduction ni de conclusion.\n    Exemple : /data/media/outputs/final_abc123.jpg\n    Si l'exécution s'est arrêtée sur un échec (étape 5 ou 9), ne produis aucun\n    chemin — indique uniquement que la génération a échoué après les tentatives\n    prévues.\n\nRÈGLES ABSOLUES (aucune exception) :\n- Si position = center ou bottom_center → jamais d'animal dans la scène\n- Si le produit est une cage, une niche, ou visuellement de forme carrée →\n  toujours position = center ou bottom_center\n- Si un animal est présent → jamais plus de 30% de la largeur du cadre, et\n  toujours secondaire visuellement au produit\n- N'appelle jamais le même outil plus de deux fois au total (sauf en cas\n  d'erreur nécessitant une nouvelle tentative)\n- Le champ promo est toujours prioritaire sur la tagline — ne l'ignore jamais\n- N'ajoute jamais de tagline sans confirmation explicite \"OUI\" de l'utilisateur\n- Ne répète jamais le même décor que la génération précédente\n- Ne dépasse jamais un scale de 0.78\n- Ne descends jamais Y en dessous de 0.78\n- Ne produis jamais de chemin d'image si une étape a échoué deux fois de suite\n- N'exprime jamais une contrainte de position sans pourcentage chiffré, et\n  toujours deux fois : en ouverture ET en clôture du prompt\n- Toutes les valeurs textuelles (tagline, promo) doivent être exemptes de tout\n  caractère cassant un JSON — évite les guillemets non échappés",
+          "passthroughBinaryImages": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -64,
+        -464
+      ],
+      "id": "0d8082d7-8b90-4c89-ab86-ec84e22397c0",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 4000,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://scraper:8000/product",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ 'https://zanimo.tn/category/81/products/' + (Math.floor(Math.random() * 200) + 1) + '?boutique_id=1' }}"
+            },
+            {
+              "name": "promo",
+              "value": "={{ \"\" }}"
+            },
+            {
+              "name": "tagline",
+              "value": "={{ \"false\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ccc52300-38b8-4008-9627-310489f0453d",
+      "name": "Choisir produit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -816,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://scraper:8000/product",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json['product']}}"
+            },
+            {
+              "name": "promo",
+              "value": "={{ $json.promo || $json[\"Promotion\"] || $json.body?.promo || $json.body?.promotion || \"\" }}"
+            },
+            {
+              "name": "tagline",
+              "value": "={{ $json['Do you want a tagline ?'].length > 0 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dcb00bbc-73ec-4a24-a862-68c76a55850d",
+      "name": "Lire lien",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -800,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        -224
+      ],
+      "id": "cd4c8b59-a64e-45d9-a9c6-ded43e4f776e",
+      "name": "Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0kelu5VT6iisDYya",
+          "name": "Google Gemini(PaLM) Api account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "zanimo-creative-agent",
+        "contextWindowLength": 7
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        16,
+        -288
+      ],
+      "id": "4ddc7d36-027e-41b9-a88b-e08af650499c",
+      "name": "Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "const product = $json.product || {\n  url: $json.url || \"\",\n  id: $json.id || \"\",\n  name: $json.name || \"\",\n  description: $json.description || \"\",\n  price: $json.price || \"\",\n  image_url: $json.image_url || \"\",\n  source: $json.source || \"zanimo.tn\",\n};\n\nif (!product.image_url) {\n  throw new Error(\"image_url manquant dans Contexte produit. Vérifie la sortie du scraper.\");\n}\nconst wantsTagline = $json.tagline === true;\nconst promo = $json.promo || $json.promotion || \"\";\n\n\n\nreturn [\n  {\n    json: {\n      product,\n      promo,\n      wantsTagline\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -304
+      ],
+      "id": "021d7b19-fce2-4dd2-8e78-6d991bd35c53",
+      "name": "Contexte produit"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -272,
+        -416
+      ],
+      "id": "cb47aca1-f005-4303-8c94-658053917e14",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool before writing the prompt. It returns prompt examples and scene composition rules stored in reference files. Read them and follow their structure and style, but create a new original prompt adapted to the current product.",
+        "url": "http://ai-agent:8000/tools/prompt-references",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        112,
+        -256
+      ],
+      "id": "d532a548-4e7d-45af-b8c1-3dd804a8572b",
+      "name": "prompt_references"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://hf-generator:8000/tools/compose-product",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"product\": {\n      \"image_url\": $(\"Merge\").item.json.product.image_url,\n      \"id\": $(\"Merge\").item.json.product.id,\n      \"name\": $(\"Merge\").item.json.product.name\n    },\n   \"promo\": $(\"Contexte produit\").item.json.promo || \"\",\n    \"scene_image_path\": $fromAI('scene_image_path', 'The local path returned by generate_scene_pollinations tool', 'string'),\n    \"position\": $fromAI('position', 'Product position: left, center, bottom_center, or right. Choose based on where the scene is empty.', 'string'),\n    \"scale\": $fromAI('scale', 'Product size ratio between 0.40 and 0.70.', 'number'),\n    \"y\": $fromAI('y', 'Floor line position as ratio of image height. Where the BOTTOM of the product touches the ground.  NEVER use values below 0.70.', 'number'),\n    \"tagline\": $fromAI('tagline', 'Courte phrase marketing accrocheuse en français, 4 à 6 mots maximum, adaptée au produit') ,\n\"tagline_color\":  $fromAI('tagline_color', 'Nom de couleur anglais ou code hex, choisi pour contraster avec la scene')\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        368,
+        -160
+      ],
+      "id": "f15d9136-c5ca-490b-a6d5-1d74cda31d65",
+      "name": "compose_real_product"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.product.image_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -480,
+        -464
+      ],
+      "id": "04bb0f72-4365-4ca2-9932-6587b3d2abcb",
+      "name": "product_img"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.output || \"\";\nconst match = raw.match(/\\/data\\/media\\/outputs\\/[^\\s`\"]+\\.(jpg|jpeg|png)/i);\n\nif (!match) {\n  throw new Error(\"Impossible d'extraire un chemin d'image valide depuis la sortie de l'agent: \" + raw);\n}\n\nreturn [\n  {\n    json: {\n      output: match[0]\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -464
+      ],
+      "id": "2d5fd734-c002-4103-aa71-c375a558e89b",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -96,
+        -256
+      ],
+      "id": "8574d965-e023-4b1b-8f37-8d68d2b8eea7",
+      "name": "Gemini fallback",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "9vXhlYz4WkzYk5Mi",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://hf-generator:8000/tools/generate-scene",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"prompt\": $fromAI('prompt', 'Le prompt en anglais ', 'string'),\n\"position\":  $fromAI('position', 'Product position: left, center, bottom_center, or right. Same value you will use for compose_real_product.', 'string') \n  }\n}}",
+        "options": {
+          "response": {}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        240,
+        -208
+      ],
+      "id": "e4777768-651d-4e0f-a830-e429dd9019c6",
+      "name": "generate_scene"
+    }
+  ],
+  "connections": {
+    "Envoyer WhatsApp": {
+      "main": [
+        []
+      ]
+    },
+    "Trigger quotidien": {
+      "main": [
+        [
+          {
+            "node": "Choisir produit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Lire lien",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choisir produit": {
+      "main": [
+        [
+          {
+            "node": "Contexte produit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire lien": {
+      "main": [
+        [
+          {
+            "node": "Contexte produit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexte produit": {
+      "main": [
+        [
+          {
+            "node": "product_img",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prompt_references": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "compose_real_product": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "product_img": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Envoyer WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini fallback": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "generate_scene": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a14f87518b7707c063d59c8c464597c8ff4cbb00cd42d1b70e64731c1bb8d954"
+  }
+}

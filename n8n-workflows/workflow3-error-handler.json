@@ -1,0 +1,81 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5fdb8644-5f4b-4c60-ada9-bd76be8eeec5",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const execError = $json.execution?.error || $json.trigger?.error || {};\nconst searchText = [\n  execError.message,\n  execError.description,\n  execError.stack,\n  JSON.stringify(execError),\n].filter(Boolean).join(' ').toLowerCase();\n\nconst lastNode = ($json.execution?.lastNodeExecuted || '').toLowerCase();\n\nlet title = ' Problème détecté';\nlet simpleMessage = \"Une erreur est survenue dans le workflow. La cause du problème n'a pas été identifiée. Il s'agit probablement d'un dysfonctionnement temporaire de l'agent. Réessayez simplement.\";\n\nconst isWhatsappNode = lastNode.includes('whatsapp');\nconst isGeneratorNode = lastNode.includes('generate_scene') || lastNode.includes('compose_real_product') || lastNode.includes('prompt_references') || searchText.includes('generate_scene_pollinations') || searchText.includes('compose_real_product');\nconst isStartNode = lastNode.includes('choisir produit') || lastNode.includes('lire lien') || lastNode.includes('product_img') || lastNode.includes('contexte produit') || lastNode.includes('scraper');\n\nconst isZanimoApiNode = lastNode.includes(\"api z'animo\") || lastNode.includes('api zanimo');\nconst isAccessRefused = searchText.includes('403') || searchText.includes('401') || searchText.includes('forbidden') || searchText.includes('unauthorized') || searchText.includes('accès refusé') || searchText.includes('access denied');\n\nconst isBrevoNode = lastNode.includes('brevo');\nconst isConnectionError = searchText.includes('econnrefused') || searchText.includes('etimedout') || searchText.includes('enotfound') || searchText.includes('timeout') || searchText.includes('network');\n\nif (searchText.includes('whatsapp') || isWhatsappNode) {\n  title = ' Problème WhatsApp';\n  simpleMessage = \"L'envoi du message WhatsApp a échoué. Vérifiez que WhatsApp est bien connecté (relancez le conteneur si besoin),vérifiez le dossier (output) pour consulter l'image. \";\n\n} else if ((isZanimoApiNode || searchText.includes('zanimo')) && isAccessRefused) {\n  title = \" Problème d'accès à l'API Zanimo\";\n  simpleMessage = \"L'accès à l'API Zanimo pour récupérer les nouveaux clients a été refusé (403/401). Vérifiez que la clé d'API ou les identifiants de connexion sont toujours valides.\";\n\n} else if (isBrevoNode && isConnectionError) {\n  title = ' Problème de connexion Brevo';\n  simpleMessage = \"La connexion au service Brevo a échoué (timeout ou service injoignable). Vérifiez la connexion internet du serveur et la disponibilité de Brevo, puis réessayez.\";\n\n} else if (isBrevoNode) {\n  title = \" Problème d'envoi Brevo\";\n  simpleMessage = \"L'envoi de l'email via Brevo a échoué. Vérifiez que la clé API Brevo est valide et que le template utilisé existe toujours.\";\n\n} else if (searchText.includes('gemini') || searchText.includes('malformed_function_call') || (searchText.includes('quota') && !searchText.includes('cloudflare') && !isGeneratorNode)) {\n  title = ' Problème Gemini';\n  simpleMessage = \"(Gemini) n'a pas pu répondre à cause d'une limite d'utilisation atteinte. Réessayez plus tard ou demain.\";\n\n} else if (isGeneratorNode || searchText.includes('cloudflare') || searchText.includes(\"génération a échoué\") || searchText.includes(\"chemin d'image\") || searchText.includes('econnrefused') || searchText.includes('enotfound')) {\n  title = \" Problème de génération d'image\";\n  simpleMessage = \"La création de l'image publicitaire a échoué. Le service de génération est indisponible ou une erreur est survenue dans le workflow. Veuillez réessayer .\";\n\n} else if (searchText.includes('404') || searchText.includes('url') || isStartNode) {\n  title = ' Problème de lien';\n  simpleMessage = \"Une erreur de lien a bloqué le workflow . Vérifiez le lien de votre produit et Réessayez.\";\n}\n\nreturn [{\n  json: {\n    title,\n    simpleMessage\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e4c01b52-cac9-4e2d-a73d-6c890b78e60b",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.ADMIN_EMAIL }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "={{ $json.title }}",
+        "html": "={{ $json.simpleMessage }}\n<br><br>En cas de blocage, n'hésitez pas à contacter Aymen {{ $env.ADMIN_PHONE }}.<br>\nmerci.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9ff77bce-37b8-46ce-ab62-4e604529a935",
+      "name": "Send an Email",
+      "webhookId": "736f3762-43e5-4df4-bf48-66a526303a32",
+      "credentials": {
+        "smtp": {
+          "id": "DWfzPMfmD4IdeNHN",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a14f87518b7707c063d59c8c464597c8ff4cbb00cd42d1b70e64731c1bb8d954"
+  }
+}
