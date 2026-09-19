@@ -1,0 +1,91 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: n8npass
+      POSTGRES_DB: n8n
+    volumes:
+      - ./storage/db/postgres:/var/lib/postgresql/data
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      TZ: Africa/Tunis
+      GENERIC_TIMEZONE: Africa/Tunis
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: n8npass
+      N8N_ENCRYPTION_KEY: change_this_32_chars_minimum_key
+      N8N_RESTRICT_FILE_ACCESS_TO: /data
+ 
+    volumes:
+      - ./storage/n8n:/home/node/.n8n
+      - ./storage/media:/data/media
+      
+    depends_on:
+      - postgres
+      - scraper
+      - whatsapp
+      - hf-generator
+      - ai-agent
+
+  scraper:
+    build: ./scraper
+    restart: unless-stopped
+    environment:
+      TZ: Africa/Tunis
+      DEFAULT_PROMO: "Offre spéciale aujourd'hui"
+      CATEGORY_URLS: "https://zanimo.tn/category/81/products/1?boutique_id=1"
+      CHANGE_CATEGORY_EVERY_DAYS: "7"
+    volumes:
+      - ./storage:/data
+
+  ai-agent:
+    build: ./ai-agent
+    restart: unless-stopped
+    ports:
+      - "8001:8000" # Expose le port de l'agent sur 8001 si tu as besoin de tester depuis ton PC
+    environment:
+      TZ: Africa/Tunis
+      REFERENCE_DIR: "/data/reference"
+      REFERENCE_MAX_CHARS: "30000"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./storage:/data
+
+  whatsapp:
+    build: ./whatsapp
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Africa/Tunis
+    volumes:
+      - ./storage/whatsapp:/app/.wwebjs_auth
+      - ./storage:/data
+
+  hf-generator:
+    build: ./hf-generator
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # Permet à n8n (et à toi) d'accéder aux outils de génération d'image
+    environment:
+      - TZ=Africa/Tunis
+      - PYTHONUNBUFFERED=1
+      - CLOUDFLARE_ACCOUNT_ID=012ae1b76a5a45e558249bb12210f93e
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - ./storage:/data
+      - ./storage/u2net:/root/.u2net  

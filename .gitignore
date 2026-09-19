@@ -1,0 +1,9 @@
+storage/whatsapp/session/
+storage/
+node_modules/
+.env
+*.log"hf-generator/venv/" 
+"scraper/venv/" 
+"**/__pycache__/" 
+"*.pyc" 
+hf-generator/venv/ 
