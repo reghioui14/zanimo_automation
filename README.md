@@ -29,4 +29,3 @@ Centralized error handling and notification system for the two previous automati
 ## Tech stack
 n8n · Docker · Python / FastAPI · Cloudflare Workers AI · rembg · BeautifulSoup · SQLite · PostgreSQL · Brevo · Evolution API (WhatsApp)
 
-## Repository structure
